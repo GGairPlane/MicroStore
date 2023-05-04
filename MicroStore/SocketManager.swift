@@ -291,7 +291,7 @@ extension SecureSocketManager {
     }
     
     
-    func getShared(path: String = "") async -> ([SharedItem], [SharedItem]) {
+    func getShared() async -> ([SharedItem], [SharedItem]) {
         let command = "GTSHR~"
         send(Data(command.utf8))
         let data = await recv()
@@ -415,6 +415,68 @@ extension SecureSocketManager {
         else {
             return response.replacingOccurrences(of: "~", with: ":")
         }
+    }
+    
+    
+    func upload(fileName: String, fileData: Data) async -> String {
+            let command = "UPLOD~\(fileName)~"
+            let commandData = Data(command.utf8)
+
+            var combinedData = commandData
+            combinedData.append(fileData)
+            send(combinedData)
+
+            let data = await recv()
+            guard let response = String(data: data!, encoding: .utf8) else {
+                return "connection error"
+            }
+
+            if response.hasPrefix("UPLAK~") {
+                return "success"
+            } else {
+                return response.replacingOccurrences(of: "~", with: ":")
+            }
+        }
+    
+    
+    func newDir(name: String) async -> String {
+        let command = "MKDIR~\(name)"
+        send(Data(command.utf8))
+        let data = await recv()
+        guard let response = String(data: data!, encoding: .utf8) else {
+            return "connection error"
+        }
+        
+        if response.hasPrefix("MKDAK~"){
+            return "success"
+        }
+        else {
+            return response.replacingOccurrences(of: "~", with: ":")
+        }
+    }
+    
+    
+    func paste(copy: Bool, sourcePath: String, destinationPath: String) async -> String {
+        let command = copy ? "COPYP~\(sourcePath)~\(destinationPath)" : "MOVFL~\(sourcePath)~\(destinationPath)"
+        let expected = copy ? "COPAK~" : "MOVAK~"
+        send(Data(command.utf8))
+        let data = await recv()
+        guard let response = String(data: data!, encoding: .utf8) else {
+            return "connection error"
+        }
+        
+        if response.hasPrefix(expected){
+            return "success"
+        }
+        else {
+            return response.replacingOccurrences(of: "~", with: ":")
+        }
+    }
+    
+    func logout() {
+        let command = "EXITT~goodbye"
+        send(Data(command.utf8))
+        close()
     }
     
     

@@ -6,12 +6,13 @@
 //
 
 import UIKit
+import UniformTypeIdentifiers
 
 var toCopy: String = ""
 var toCut: String = ""
 
 class ExplorerViewController: UIViewController {
-
+    
     
     
     @IBOutlet weak var backButton: UIButton!
@@ -24,35 +25,10 @@ class ExplorerViewController: UIViewController {
     
     var currPath: String = ""
     
-    var isLoading = false
-    let activityIndicator = UIActivityIndicatorView(style: .medium)
-    
-    
-    
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        if scrollView.contentOffset.y == -4 && !isLoading{
-            isLoading = true
-            
-            Task {
-                let (dirs, files) = await sock.getDir(path: currPath)
-                self.dirs = dirs
-                self.files = files
-                self.tableView.reloadData()
-            }
-        }
-    }
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        tableView.dataSource = self
-        tableView.delegate = self
-        backButton.isHidden = currPath.isEmpty
 
-        
-        Task{
+    func refreshData() {
+        Task {
             let (dirs, files) = await sock.getDir(path: currPath)
-            
             DispatchQueue.main.async {
                 self.dirs = dirs
                 self.files = files
@@ -61,39 +37,24 @@ class ExplorerViewController: UIViewController {
         }
     }
     
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        tableView.dataSource = self
+        tableView.delegate = self
+        backButton.isHidden = currPath.isEmpty
+        
+        refreshData()
+        
+    }
+    
     @IBAction func backButtonTapped(_ sender: UIButton) {
         navigationController?.popViewController(animated: true)
-        
-        
-
     }
-    
-    
-    
-    @IBAction func openMenu(_ sender: UIButton) {
-        let uploadFileAction = UIAction(title: "Upload File") { _ in
-               // Handle file upload
-           }
-
-           let pasteCopiedAction = UIAction(title: "Paste Copied") { _ in
-               // Handle pasting copied item
-           }
-
-           let makeNewDirAction = UIAction(title: "Make New Directory") { _ in
-               // Handle creating a new directory
-           }
-
-           let logoutAction = UIAction(title: "Logout", attributes: .destructive) { _ in
-               // Handle logout
-           }
-
-           let menu = UIMenu(title: "", children: [uploadFileAction, pasteCopiedAction, makeNewDirAction, logoutAction])
-           sender.menu = menu
-           sender.showsMenuAsPrimaryAction = true
-    }
-    
     
 }
+
 
 extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
     
@@ -119,7 +80,6 @@ extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
             cell.detailTextLabel?.text = ""
 
         }
-        print(files)
         return cell
     }
     
@@ -133,7 +93,8 @@ extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
         if isDirectory {
             let enterAction = UIAlertAction(title: "Enter", style: .default) { _ in
                 let explorerViewController = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "explorer_controller") as! ExplorerViewController
-                    explorerViewController.currPath = self.currPath  + itemName + "/"
+                    explorerViewController.currPath = self.currPath  + itemName + "\\"
+                    print(explorerViewController.currPath)
                     explorerViewController.hidesBottomBarWhenPushed = false
                     self.navigationController?.pushViewController(explorerViewController, animated: true)
             }
@@ -222,6 +183,7 @@ extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
                     }
                     return
                 }
+                self.refreshData()
             }
         }
         
@@ -256,6 +218,7 @@ extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
                         }
                         return
                     }
+                    self.refreshData()
                 }
                 
             })
@@ -274,7 +237,123 @@ extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
         actionSheet.addAction(cancelAction)
         
         tableView.deselectRow(at: indexPath, animated: true)
-        
         self.present(actionSheet, animated: true, completion: nil)
+    }
+}
+
+
+extension ExplorerViewController : UIDocumentPickerDelegate {
+    
+    @IBAction func openMenu(_ sender: UIButton) {
+        let uploadFileAction = UIAction(title: "Upload File") { _ in
+            let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.data])
+                documentPicker.delegate = self
+                documentPicker.modalPresentationStyle = .formSheet
+                self.present(documentPicker, animated: true, completion: nil)
+           }
+
+       let pasteAction = UIAction(title: "Paste") { _ in
+           if !toCopy.isEmpty || !toCut.isEmpty {
+               let sourcePath = !toCopy.isEmpty ? toCopy : toCut
+               Task {
+                   let result = await sock.paste(copy: !toCopy.isEmpty, sourcePath: sourcePath, destinationPath: self.currPath)
+                   if result != "success" {
+                       DispatchQueue.main.async {
+                           let alertController = UIAlertController(title: "Error", message: result, preferredStyle: .alert)
+                           alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                           self.present(alertController, animated: true)
+                       }
+                       return
+                   } else {
+                       toCopy = ""
+                       toCut = ""
+                   }
+               }
+           }
+       }
+    
+
+        let makeNewDirAction = UIAction(title: "Make New Directory") { _ in
+            let alertController = UIAlertController(title: "Create New Directory", message: "Enter the name for the new directory.", preferredStyle: .alert)
+            alertController.addTextField { textField in
+                textField.placeholder = "Directory name"
+            }
+            alertController.addAction(UIAlertAction(title: "Create", style: .default) { _ in
+                guard let dirName = alertController.textFields?.first?.text, !dirName.isEmpty else {
+                    return
+                }
+                let forbiddenCharacters = CharacterSet(charactersIn: "/\\:*?\"<>|")
+                if dirName.rangeOfCharacter(from: forbiddenCharacters) == nil {
+                    Task {
+                        let result = await sock.newDir(name: dirName)
+                        if result != "success" {
+                            DispatchQueue.main.async {
+                                let alertController = UIAlertController(title: "Error", message: result, preferredStyle: .alert)
+                                alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                                self.present(alertController, animated: true)
+                            }
+                        }
+                        self.refreshData()
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        let alertController = UIAlertController(title: "Error", message: "The directory name contains forbidden characters.", preferredStyle: .alert)
+                        alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                        self.present(alertController, animated: true)
+                    }
+                }
+            })
+            alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            self.present(alertController, animated: true)
+        }
+
+                                         
+
+       let logoutAction = UIAction(title: "Logout", attributes: .destructive) { _ in
+           Task {
+               sock.logout()
+               
+               DispatchQueue.main.async {
+                   if let navigationController = self.navigationController {
+                       navigationController.popToRootViewController(animated: true)
+
+                   }
+               }
+           }
+       }
+
+       let menu = UIMenu(title: "", children: [uploadFileAction, pasteAction, makeNewDirAction, logoutAction])
+       sender.menu = menu
+       sender.showsMenuAsPrimaryAction = true
+    }
+    
+    
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        guard let url = urls.first else { return }
+        
+        if url.startAccessingSecurityScopedResource() {
+            defer { url.stopAccessingSecurityScopedResource() }
+            
+            guard let fileData = try? Data(contentsOf: url) else {
+                let alertController = UIAlertController(title: "Error", message: "Failed to read the file data", preferredStyle: .alert)
+                alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                self.present(alertController, animated: true)
+                return
+            }
+            let fileName = url.lastPathComponent
+            
+            Task {
+                let result = await sock.upload(fileName: fileName, fileData: fileData)
+                if result != "success" {
+                    DispatchQueue.main.async {
+                        let alertController = UIAlertController(title: "Error", message: result, preferredStyle: .alert)
+                        alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                        self.present(alertController, animated: true)
+                    }
+                }
+                self.refreshData()
+                
+            }
+        }
     }
 }

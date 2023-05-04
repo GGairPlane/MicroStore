@@ -13,42 +13,27 @@ class SharedViewController: UIViewController {
     
     var dirs: [SharedItem] = []
     var files: [SharedItem] = []
-    
-    var currPath: String = ""
-    
-    var isLoading = false
-    let activityIndicator = UIActivityIndicatorView(style: .medium)
-    
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        if scrollView.contentOffset.y == -4 && !isLoading{
-            isLoading = true
-            
-            Task {
-                let (dirs, files) = await sock.getShared(path: currPath)
-                self.dirs = dirs
-                self.files = files
-                self.tableView.reloadData()
-            }
-        }
-    }
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
         
-        currPath = ""
-        
-        tableView.dataSource = self
-        tableView.delegate = self
-        
-        Task{
-            let (dirs, files) = await sock.getShared(path: currPath)
-            
+    
+    func refreshData() {
+        Task {
+            let (dirs, files) = await sock.getShared()
             DispatchQueue.main.async {
                 self.dirs = dirs
                 self.files = files
                 self.tableView.reloadData()
             }
         }
+    }
+
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+                
+        tableView.dataSource = self
+        tableView.delegate = self
+        
+        refreshData()
     }
     
 
@@ -64,54 +49,163 @@ class SharedViewController: UIViewController {
 
 }
 
-    extension SharedViewController : UITableViewDataSource, UITableViewDelegate {
-    
-    func numberOfSections(in tableView: UITableView) -> Int {
-        return 2
-    }
+extension SharedViewController : UITableViewDataSource, UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return section == 0 ? dirs.count : files.count
+        return files.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell =  tableView.dequeueReusableCell(withIdentifier: "fileCell", for: indexPath)
-        if indexPath.section == 0 {
-            cell.textLabel?.text = dirs[indexPath.row].name
-            cell.detailTextLabel?.text = dirs[indexPath.row].perm
-        } else {
-            cell.textLabel?.text = files[indexPath.row].name
-            cell.detailTextLabel?.text = files[indexPath.row].perm
-        }
+        cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 16.0)
+        cell.detailTextLabel?.font = UIFont.boldSystemFont(ofSize: 16.0)
 
+        cell.textLabel?.text = files[indexPath.row].name
+        cell.detailTextLabel?.text = files[indexPath.row].perm
         return cell
     }
-        
+    
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        let isDirectory = indexPath.section == 0
-        let itemName = isDirectory ? dirs[indexPath.row].name : files[indexPath.row].name
+        let itemName = files[indexPath.row].name
         
         let actionSheet = UIAlertController(title: nil, message: "Choose an action for \(itemName)", preferredStyle: .actionSheet)
         
-        let shareAction = UIAlertAction(title: "Share", style: .default) { _ in
-            // Call your sock.share function here
-            // Example: await sock.share(itemName: itemName, isDirectory: isDirectory)
+        
+        let downloadAction = UIAlertAction(title: "Download", style: .default) { _ in
+            Task {
+                let (result, fileData) = await sock.download(path: "|" + itemName)
+                if result == itemName, let data = fileData {
+                    DispatchQueue.main.async {
+                        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(itemName)
+                        do {
+                            try data.write(to: tempURL)
+                            let activityViewController = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
+                            self.present(activityViewController, animated: true, completion: nil)
+                        } catch {
+                            let alertController = UIAlertController(title: "Error", message: "Failed to save the file locally.", preferredStyle: .alert)
+                            alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                            self.present(alertController, animated: true)
+                        }
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        let alertController = UIAlertController(title: "Error", message: result, preferredStyle: .alert)
+                        alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                        self.present(alertController, animated: true)
+                    }
+                }
+            }
+            
         }
         
-        let changeNameAction = UIAlertAction(title: "Change Name", style: .default) { _ in
-            // Call your sock.changename function here
-            // Example: await sock.changename(itemName: itemName, isDirectory: isDirectory)
+        let shareAction = UIAlertAction(title: "Share", style: .default) { _ in
+            let alertController = UIAlertController(title: "Share File", message: "Enter the username and choose the permission level.", preferredStyle: .alert)
+            
+            alertController.addTextField { textField in
+                textField.placeholder = "Username"
+            }
+            
+            alertController.addAction(UIAlertAction(title: "Share", style: .default) { _ in
+                guard let username = alertController.textFields?.first?.text, !username.isEmpty else {
+                    return
+                }
+                
+                let permissionActionSheet = UIAlertController(title: "Choose Permission", message: nil, preferredStyle: .actionSheet)
+                
+                for permission in ["Viewer", "Editor"] {
+                    permissionActionSheet.addAction(UIAlertAction(title: permission, style: .default) { _ in
+                        Task { let result = await sock.share(name: username, path: "|"+itemName, perm: permission)
+                            if result != "success" {
+                                DispatchQueue.main.async {
+                                    let alertController = UIAlertController(title: "Error", message: result, preferredStyle: .alert)
+                                    alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                                    self.present(alertController, animated: true)
+                                }
+                                return
+                            }
+                        }
+                    })
+                }
+                
+                permissionActionSheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+                
+                self.present(permissionActionSheet, animated: true)
+            })
+            
+            alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            
+            self.present(alertController, animated: true)
+        }
+        
+
+        let removeAction = UIAlertAction(title: "Remove", style: .default) { _ in
+            Task { let result = await sock.remove(path: "|" + itemName)
+                if result != "success" {
+                    DispatchQueue.main.async {
+                        let alertController = UIAlertController(title: "Error", message: result, preferredStyle: .alert)
+                        alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                        self.present(alertController, animated: true)
+                    }
+                    return
+                }
+                self.refreshData()
+            }
+        }
+        
+        let copyAction = UIAlertAction(title: "Copy", style: .default) { _ in
+            toCopy = "|" + itemName
+            toCut = ""
+        }
+        
+        let cutAction = UIAlertAction(title: "Cut", style: .default) { _ in
+            toCut = "|" + itemName
+            toCopy = ""
+        }
+        
+        let changeNameAction = UIAlertAction(title: "Rename", style: .default) { _ in
+            let alertController = UIAlertController(title: "Share File", message: "Enter the username and choose the permission level.", preferredStyle: .alert)
+            
+            alertController.addTextField { textField in
+                textField.text = itemName
+                textField.placeholder = "New name"
+            }
+            
+            alertController.addAction(UIAlertAction(title: "Rename", style: .default) { _ in
+                guard let newName = alertController.textFields?.first?.text, !newName.isEmpty else {
+                    return
+                }
+                Task { let result = await sock.rename(oldName: "|"+itemName, newName: "|"+newName)
+                    if result != "success" {
+                        DispatchQueue.main.async {
+                            let alertController = UIAlertController(title: "Error", message: result, preferredStyle: .alert)
+                            alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                            self.present(alertController, animated: true)
+                        }
+                        return
+                    }
+                    self.refreshData()
+                }
+                
+            })
+            
+            alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            
+            self.present(alertController, animated: true)
         }
         
         let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
         
+        actionSheet.addAction(downloadAction)
         actionSheet.addAction(shareAction)
+        actionSheet.addAction(removeAction)
+        actionSheet.addAction(copyAction)
+        actionSheet.addAction(cutAction)
         actionSheet.addAction(changeNameAction)
         actionSheet.addAction(cancelAction)
         
         tableView.deselectRow(at: indexPath, animated: true)
-        
         self.present(actionSheet, animated: true, completion: nil)
     }
 }
