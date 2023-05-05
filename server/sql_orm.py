@@ -46,17 +46,14 @@ class UserFileORM:
         self.open_DB()
         sql = f"SELECT shares.id, files.path, shares.perm FROM shares INNER JOIN files ON shares.id=files.id WHERE shares.user='{user}'"
         res = self.current.execute(sql)
-        
-        dirs = []
+
         files = []
         for row in res:
             if os.path.isfile(row[1]):
                 files.append((os.path.split(row[1])[1], row[2], row[0]))
-            elif os.path.isdir(row[1]):
-                dirs.append((os.path.split(row[1])[1], row[2], row[0]))
         self.commit()
         self.close_DB()
-        return json.dumps((dirs, files)).encode()
+        return json.dumps(files).encode()
         
     def add_file(self, user, path, perm):
         self.open_DB()
