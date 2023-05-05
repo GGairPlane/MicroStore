@@ -17,6 +17,7 @@ def lsdir(dir):
 
 
 def remove(path):
+    print(path)
     if os.path.isfile(path):
         os.remove(path)
         return True

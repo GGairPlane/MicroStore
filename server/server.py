@@ -142,11 +142,6 @@ def protocol_build_reply(request, user):
                     reply = b"REMAK~" + filename
                 else:
                     reply = "ERROR~201~path does not exists"
-            elif request[0] == b"UPLOD":
-                if new_file(os.path.join(user.curr_dir, path.decode()), request[2]):
-                    reply = b"UPLAK~" + path
-                else:
-                    reply = b"ERROR~203~path already exists"
             elif request[0] == b"CHGNM":
                 if rename(
                     path, os.path.join(os.path.split(path)[0], request[2].decode())
@@ -154,11 +149,6 @@ def protocol_build_reply(request, user):
                     reply = b"CHGAK~" + filename + b"~" + request[2]
                 else:
                     reply = "ERROR~201~path does not exists"
-            elif request[0] == b"MKDIR":
-                if new_dir(os.path.join(user.curr_dir, path.decode())):
-                    reply = b"MKDAK~" + path
-                else:
-                    reply = "ERROR~203~path already exists"
             elif request[0] == b"MOVFL":
                 if move(
                     os.path.join(user.path, path.decode()),
@@ -179,9 +169,7 @@ def protocol_build_reply(request, user):
         elif reply == b"":
             if request[0] in [
                 b"REMOV",
-                b"UPLOD",
                 b"CHGNM",
-                b"MKDIR",
                 b"MOVFL",
                 b"SHARE",
             ]:
@@ -214,12 +202,12 @@ def protocol_build_reply(request, user):
                 or request[1] == user.path
             ):
                 reply = "ERROR~205~cant delete"
-            elif remove(os.path.join(user.curr_dir, request[1].decode())):
+            elif remove(os.path.join(user.path, request[1].decode())):
                 reply = b"REMAK~" + request[1]
             else:
                 reply = "ERROR~201~path does not exists"
         elif request[0] == b"UPLOD":
-            new_file(os.path.join(user.curr_dir, request[1].decode()), request[2])
+            new_file(os.path.join(user.path, request[1].decode()), request[2])
             reply = b"UPLAK~" + request[1]
         elif request[0] == b"DWNLD":
             file = get_file(os.path.join(user.path, request[1].decode()))
@@ -252,7 +240,7 @@ def protocol_build_reply(request, user):
             else:
                 reply = "ERROR~201~path does not exists"
         elif request[0] == b"MKDIR":
-            if new_dir(os.path.join(user.curr_dir, request[1].decode())):
+            if new_dir(os.path.join(user.path, request[1].decode())):
                 reply = b"MKDAK~" + request[1]
             else:
                 reply = "ERROR~203~dir already exists"

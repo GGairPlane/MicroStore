@@ -203,6 +203,7 @@ def main():
                     dir_update = True
                     files = pg.sprite.Group()
                     files.empty()
+                    print("curr dir", curr_dir)
                     if curr_dir == "|":
                         glbl.to_send = protocol_build_request("getshare")
                     else:
@@ -222,6 +223,8 @@ def main():
                     y = 100
                     if req_dir == ".":
                         curr_dir = curr_dir
+                    elif curr_dir == "|":
+                        pass
                     elif req_dir == "..":
                         curr_dir = os.path.split(curr_dir)[0]
                     else:
@@ -229,7 +232,7 @@ def main():
                     req_dir = ""
 
                     if curr_dir == "|":
-                        for file in glbl.recieve[1]:
+                        for file in glbl.recieve:
                             files.add(
                                 Shared_File_But(
                                     file[0], file[1], file[2], curr_dir, id, x, y
@@ -267,7 +270,7 @@ def main():
                         dir_update = False
 
                     elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-                        if len(curr_dir) != 0 and curr_dir[0] == "|":
+                        if curr_dir == "|":
                             right_selected = False
                             pg.time.set_timer(timer_event, time_delay, 1)
 
@@ -304,10 +307,10 @@ def main():
                                     glbl.sent = False
 
                                 elif copy_button.rect.collidepoint(event.pos):
-                                    copy = os.path.join(curr_dir, "|", curr_file.uuid)
+                                    copy = (curr_file.text, os.path.join(curr_dir, "|", curr_file.uuid))
                                     cut = ""
                                 elif cut_button.rect.collidepoint(event.pos):
-                                    cut = os.path.join(curr_dir, "|", curr_file.uuid)
+                                    cut = (curr_file.text, os.path.join(curr_dir, "|", curr_file.uuid))
                                     copy = ""
                                 elif rename_button.rect.collidepoint(event.pos):
                                     glbl.to_send = protocol_build_request(
@@ -355,31 +358,6 @@ def main():
                                         "share", "|" + curr_file.uuid
                                     )
                                     glbl.sent = False
-
-                            elif paste_button.rect.collidepoint(event.pos):
-                                if copy != "":
-                                    glbl.to_send = protocol_build_request(
-                                        "copy", copy, os.path.join(curr_dir, copy)
-                                    )
-                                    glbl.sent = False
-
-                                elif cut != "":
-                                    glbl.to_send = protocol_build_request(
-                                        "cut", cut, os.path.join(curr_dir, copy)
-                                    )
-                                    glbl.sent = False
-
-                            elif upload_button.rect.collidepoint(event.pos):
-                                dir_update = True
-                                with threading.Lock():
-                                    glbl.to_send = protocol_build_request("upload")
-
-                                time.sleep(0.1)
-                                glbl.sent = False
-
-                            elif mkdir_button.rect.collidepoint(event.pos):
-                                glbl.to_send = protocol_build_request("new dir")
-                                glbl.sent = False
 
                             for file in files:
                                 if file.rect.collidepoint(event.pos):
@@ -491,16 +469,28 @@ def main():
 
                             elif paste_button.rect.collidepoint(event.pos):
                                 if copy != "":
-                                    glbl.to_send = protocol_build_request(
-                                        "copy", copy, os.path.join(curr_dir, copy)
-                                    )
-                                    glbl.sent = False
+                                    if type(copy) == tuple:
+                                        glbl.to_send = protocol_build_request(
+                                            "copy", copy[1], os.path.join(curr_dir, copy[0])
+                                        )
+                                        glbl.sent = False                                        
+                                    else:
+                                        glbl.to_send = protocol_build_request(
+                                            "copy", copy, os.path.join(curr_dir, copy)
+                                        )
+                                        glbl.sent = False
 
                                 elif cut != "":
-                                    glbl.to_send = protocol_build_request(
-                                        "cut", cut, os.path.join(curr_dir, copy)
-                                    )
-                                    glbl.sent = False
+                                    if type(copy) == tuple:
+                                        glbl.to_send = protocol_build_request(
+                                            "cut", cut[1], os.path.join(curr_dir, cut[0])
+                                        )
+                                        glbl.sent = False
+                                    else:
+                                        glbl.to_send = protocol_build_request(
+                                            "cut", cut, os.path.join(curr_dir, cut)
+                                        )
+                                        glbl.sent = False
 
                             elif upload_button.rect.collidepoint(event.pos):
                                 dir_update = True
@@ -557,7 +547,7 @@ def main():
                     cut_button.draw(win)
                     rename_button.draw(win)
                     share_button.draw(win)
-                elif right_selected:
+                elif right_selected and curr_dir != "|":
                     paste_button.draw(win)
                     upload_button.draw(win)
                     mkdir_button.draw(win)
