@@ -36,6 +36,11 @@ class SharedViewController: UIViewController {
         refreshData()
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        refreshData()
+    }
+    
 
     /*
     // MARK: - Navigation

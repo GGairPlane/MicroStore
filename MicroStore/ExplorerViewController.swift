@@ -13,11 +13,7 @@ var toCut: String = ""
 
 class ExplorerViewController: UIViewController {
     
-    
-    
     @IBOutlet weak var backButton: UIButton!
-    
-    
     @IBOutlet weak var tableView: UITableView!
     
     var dirs: [String] = []
@@ -44,15 +40,17 @@ class ExplorerViewController: UIViewController {
         tableView.dataSource = self
         tableView.delegate = self
         backButton.isHidden = currPath.isEmpty
-        
+    }
+    
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
         refreshData()
-        
     }
     
     @IBAction func backButtonTapped(_ sender: UIButton) {
         navigationController?.popViewController(animated: true)
     }
-    
 }
 
 
@@ -190,12 +188,12 @@ extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
         let copyAction = UIAlertAction(title: "Copy", style: .default) { _ in
             toCopy = self.currPath + itemName
             toCut = ""
-            }
+        }
         
         let cutAction = UIAlertAction(title: "Cut", style: .default) { _ in
             toCut = self.currPath + itemName
             toCopy = ""
-            }
+        }
         
         let changeNameAction = UIAlertAction(title: "Rename", style: .default) { _ in
             let alertController = UIAlertController(title: "Share File", message: "Enter the username and choose the permission level.", preferredStyle: .alert)
@@ -272,7 +270,6 @@ extension ExplorerViewController : UIDocumentPickerDelegate {
            }
        }
     
-
         let makeNewDirAction = UIAction(title: "Make New Directory") { _ in
             let alertController = UIAlertController(title: "Create New Directory", message: "Enter the name for the new directory.", preferredStyle: .alert)
             alertController.addTextField { textField in
@@ -352,7 +349,6 @@ extension ExplorerViewController : UIDocumentPickerDelegate {
                     }
                 }
                 self.refreshData()
-                
             }
         }
     }

@@ -225,7 +225,7 @@ class AESCipher {
     private static func sha256(string: String) -> Data {
         let data = Data(string.utf8)
         var hash = Data(count: Int(CC_SHA256_DIGEST_LENGTH))
-        data.withUnsafeBytes { dataBytes in
+        _ = data.withUnsafeBytes { dataBytes in
             hash.withUnsafeMutableBytes { hashBytes in
                 CC_SHA256(dataBytes.baseAddress, CC_LONG(data.count), hashBytes.bindMemory(to: UInt8.self).baseAddress)
             }
