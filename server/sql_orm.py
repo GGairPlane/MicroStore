@@ -46,17 +46,14 @@ class UserFileORM:
         self.open_DB()
         sql = f"SELECT shares.id, files.path, shares.perm FROM shares INNER JOIN files ON shares.id=files.id WHERE shares.user='{user}'"
         res = self.current.execute(sql)
-        
-        dirs = []
+
         files = []
         for row in res:
             if os.path.isfile(row[1]):
                 files.append((os.path.split(row[1])[1], row[2], row[0]))
-            elif os.path.isdir(row[1]):
-                dirs.append((os.path.split(row[1])[1], row[2], row[0]))
         self.commit()
         self.close_DB()
-        return json.dumps((dirs, files)).encode()
+        return json.dumps(files).encode()
         
     def add_file(self, user, path, perm):
         self.open_DB()
@@ -73,6 +70,31 @@ class UserFileORM:
         self.commit()
         self.close_DB()
         return to_return
+    
+    
+    def delete_file(self, path):
+        self.open_DB()
+        
+        sql = f"""DELETE FROM shares WHERE id=(SELECT id FROM files WHERE path='{path}');
+                    DELETE FROM files  WHERE path='{path}';"""
+
+        to_return = True
+        try:
+            self.current.executescript(sql)
+        except Exception as e:
+            print(e)
+            to_return = False
+        self.commit()
+        self.close_DB()
+        return to_return
+    
+    def change_name(self, old_name, new_name):
+        self.open_DB()
+        sql = f" UPDATE files SET path='{new_name}'WHERE path='{old_name}'"
+        self.current.execute(sql)
+      
+        self.commit()
+        self.close_DB()
     
     def get_path_by_id(self, id):
         self.open_DB()
