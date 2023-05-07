@@ -8,8 +8,9 @@
 import UIKit
 import UniformTypeIdentifiers
 
-var toCopy: String = ""
-var toCut: String = ""
+var copyName: String = ""
+var cutName: String = ""
+var sourceID: String = ""
 
 class ExplorerViewController: UIViewController {
     
@@ -92,7 +93,6 @@ extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
             let enterAction = UIAlertAction(title: "Enter", style: .default) { _ in
                 let explorerViewController = UIStoryboard(name: "Main", bundle: nil).instantiateViewController(withIdentifier: "explorer_controller") as! ExplorerViewController
                     explorerViewController.currPath = self.currPath  + itemName + "\\"
-                    print(explorerViewController.currPath)
                     explorerViewController.hidesBottomBarWhenPushed = false
                     self.navigationController?.pushViewController(explorerViewController, animated: true)
             }
@@ -142,7 +142,7 @@ extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
                     
                     let permissionActionSheet = UIAlertController(title: "Choose Permission", message: nil, preferredStyle: .actionSheet)
                     
-                    for permission in ["Viewer", "Editor"] {
+                    for permission in ["viewer", "editor"] {
                         permissionActionSheet.addAction(UIAlertAction(title: permission, style: .default) { _ in
                             Task { let result = await sock.share(name: username, path: self.currPath+itemName, perm: permission)
                                 if result != "success" {
@@ -186,13 +186,15 @@ extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
         }
         
         let copyAction = UIAlertAction(title: "Copy", style: .default) { _ in
-            toCopy = self.currPath + itemName
-            toCut = ""
+            copyName = self.currPath + itemName
+            cutName = ""
+            sourceID = ""
         }
         
         let cutAction = UIAlertAction(title: "Cut", style: .default) { _ in
-            toCut = self.currPath + itemName
-            toCopy = ""
+            cutName = self.currPath + itemName
+            copyName = ""
+            sourceID = ""
         }
         
         let changeNameAction = UIAlertAction(title: "Rename", style: .default) { _ in
@@ -251,21 +253,19 @@ extension ExplorerViewController : UIDocumentPickerDelegate {
            }
 
        let pasteAction = UIAction(title: "Paste") { _ in
-           if !toCopy.isEmpty || !toCut.isEmpty {
-               let sourcePath = !toCopy.isEmpty ? toCopy : toCut
+           if !copyName.isEmpty || !cutName.isEmpty {
+               let sourcePath = !copyName.isEmpty ? copyName : cutName
+               let actualSource = sourceID.isEmpty ? sourcePath : "|\(sourceID)"
                Task {
-                   let result = await sock.paste(copy: !toCopy.isEmpty, sourcePath: sourcePath, destinationPath: self.currPath)
+                   let result = await sock.paste(copy: !copyName.isEmpty, sourcePath: actualSource, destinationPath: self.currPath + URL(fileURLWithPath: sourcePath.replacingOccurrences(of: "\\", with: "/")).lastPathComponent)
                    if result != "success" {
                        DispatchQueue.main.async {
                            let alertController = UIAlertController(title: "Error", message: result, preferredStyle: .alert)
                            alertController.addAction(UIAlertAction(title: "OK", style: .default))
                            self.present(alertController, animated: true)
                        }
-                       return
-                   } else {
-                       toCopy = ""
-                       toCut = ""
                    }
+                   self.refreshData()
                }
            }
        }

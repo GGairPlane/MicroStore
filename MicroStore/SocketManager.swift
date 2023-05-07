@@ -48,7 +48,7 @@ public class SocketManager {
         let headerData = String(format: "%0\(SIZE_HEADER_SIZE - 1)d|", data.count)
         let combinedData = headerData.data(using: .utf8)! + data
         
-        _ = combinedData.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) -> Int in
+        let bytesSent = combinedData.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) -> Int in
             if let baseAddress = bytes.baseAddress {
                 return Darwin.send(socketFD, baseAddress, combinedData.count, 0)
             } else {
@@ -56,7 +56,7 @@ public class SocketManager {
             }
         }
         if TCP_DEBUUG && data.count > 0 {
-            print("\nSent(\(data.count))>>>", String(data: combinedData.prefix(LEN_TO_PRINT), encoding: .utf8) ?? "Non-UTF8 Data")
+            print("\nSent(\(data.count))>>>", combinedData.prefix(LEN_TO_PRINT).asciiEncodedString())
         }
     }
     
@@ -90,7 +90,7 @@ public class SocketManager {
             while data.count < dataLen {
                 var buffer = [UInt8](repeating: 0, count: dataLen - data.count)
                 let bytesRead = Darwin.recv(socketFD, &buffer, buffer.count, 0)
-                
+
                 if bytesRead == 0 {
                     data = Data()
                     break
@@ -101,7 +101,7 @@ public class SocketManager {
         }
         
         if TCP_DEBUUG && !sizeHeader.isEmpty {
-            print("\nRecv(\(sizeHeader))>>>", String(data: data.prefix(min(data.count, LEN_TO_PRINT)),encoding: .utf8 ) ?? "Non-UTF8 Data")
+            print("\nRecv(\(data.count))>>>", sizeHeader.asciiEncodedString() + data.prefix(min(data.count, LEN_TO_PRINT)).asciiEncodedString())
         }
         
         if dataLen != data.count {
@@ -136,6 +136,7 @@ public class SecureSocketManager {
     
     // Override the send method to encrypt data using the cipher
     public func send(_ data: Data) {
+        print("\nC LOG:Sent >>> ", data.prefix(LEN_TO_PRINT).asciiEncodedString())
         if let cipher = cipher {
             let encryptedData = cipher.encrypt(data: data)
             socket.send(encryptedData!)
@@ -148,6 +149,7 @@ public class SecureSocketManager {
     public func recv() async -> Data? {
         if let encryptedData = await socket.recv(), let cipher = cipher {
             let decryptedData = cipher.decrypt(data: encryptedData)
+            print("\nC LOG:Recieved <<< ", decryptedData?.asciiEncodedString() ?? "no data")
             return decryptedData
         } else {
             return await socket.recv()
@@ -291,37 +293,33 @@ extension SecureSocketManager {
     }
     
     
-    func getShared() async -> ([SharedItem], [SharedItem]) {
+    func getShared() async -> [SharedItem] {
         let command = "GTSHR~"
         send(Data(command.utf8))
         let data = await recv()
         
         guard let response = String(data: data!, encoding: .utf8),
               response.hasPrefix("REGTS~") else {
-            return ([], [])
+            return []
         }
         
         let jsonResponse = response.dropFirst("REGTS~".count)
         
         do {
             if let jsonData = jsonResponse.data(using: .utf8),
-               let sharedContent = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [[[String]]] {
-                
-                let dirs = sharedContent[0].map { item -> SharedItem in
+               let sharedContent = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [[String]] {
+                                
+                let files = sharedContent.map { item -> SharedItem in
                     SharedItem(name: item[0], perm: item[1], uuid: item[2])
                 }
                 
-                let files = sharedContent[1].map { item -> SharedItem in
-                    SharedItem(name: item[0], perm: item[1], uuid: item[2])
-                }
-                
-                return (dirs, files)
+                return files
             }
         } catch {
             print("JSON parsing error: \(error)")
         }
         
-        return ([], [])
+        return []
     }
     
     
@@ -384,9 +382,11 @@ extension SecureSocketManager {
         let prefixData = data.subdata(in: 0..<separatorIndices[0])
         let filenameData = data.subdata(in: (separatorIndices[0] + 1)..<separatorIndices[1])
         let fileData = data.subdata(in: (separatorIndices[1] + 1)..<data.count)
-        
         if let prefix = String(data: prefixData, encoding: .utf8), prefix == "REDWN" {
-            if let filename = String(data: filenameData, encoding: .utf8) {
+            if let fullname = String(data: filenameData, encoding: .utf8) {
+                
+                let filename = URL(fileURLWithPath: fullname.replacingOccurrences(of: "\\", with: "/")).lastPathComponent
+
                 return (filename, fileData)
             } else {
                 return ("Invalid filename", nil)
@@ -486,3 +486,23 @@ enum SocketError : Error {
     case connectionError
 }
 
+
+import Foundation
+import CryptoKit
+
+func md5Checksum(data: Data) -> String {
+    let digest = Insecure.MD5.hash(data: data)
+    return digest.map { String(format: "%02hhx", $0) }.joined()
+}
+
+extension Data {
+    func asciiEncodedString() -> String {
+        return self.reduce("") { (result, byte) -> String in
+            if (32...126).contains(byte) {
+                return result + String(UnicodeScalar(byte))
+            } else {
+                return result + String(format: "\\x%02x", byte)
+            }
+        }
+    }
+}

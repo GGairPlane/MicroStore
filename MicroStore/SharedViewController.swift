@@ -11,15 +11,13 @@ class SharedViewController: UIViewController {
     
     @IBOutlet weak var tableView: UITableView!
     
-    var dirs: [SharedItem] = []
     var files: [SharedItem] = []
         
     
     func refreshData() {
         Task {
-            let (dirs, files) = await sock.getShared()
+            let files = await sock.getShared()
             DispatchQueue.main.async {
-                self.dirs = dirs
                 self.files = files
                 self.tableView.reloadData()
             }
@@ -32,8 +30,6 @@ class SharedViewController: UIViewController {
                 
         tableView.dataSource = self
         tableView.delegate = self
-        
-        refreshData()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -74,13 +70,14 @@ extension SharedViewController : UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         let itemName = files[indexPath.row].name
+        let itemID = files[indexPath.row].uuid
         
         let actionSheet = UIAlertController(title: nil, message: "Choose an action for \(itemName)", preferredStyle: .actionSheet)
         
         
         let downloadAction = UIAlertAction(title: "Download", style: .default) { _ in
             Task {
-                let (result, fileData) = await sock.download(path: "|" + itemName)
+                let (result, fileData) = await sock.download(path: "|" + itemID)
                 if result == itemName, let data = fileData {
                     DispatchQueue.main.async {
                         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(itemName)
@@ -119,9 +116,9 @@ extension SharedViewController : UITableViewDataSource, UITableViewDelegate {
                 
                 let permissionActionSheet = UIAlertController(title: "Choose Permission", message: nil, preferredStyle: .actionSheet)
                 
-                for permission in ["Viewer", "Editor"] {
+                for permission in ["viewer", "editor"] {
                     permissionActionSheet.addAction(UIAlertAction(title: permission, style: .default) { _ in
-                        Task { let result = await sock.share(name: username, path: "|"+itemName, perm: permission)
+                        Task { let result = await sock.share(name: username, path: "|"+itemID, perm: permission)
                             if result != "success" {
                                 DispatchQueue.main.async {
                                     let alertController = UIAlertController(title: "Error", message: result, preferredStyle: .alert)
@@ -146,7 +143,7 @@ extension SharedViewController : UITableViewDataSource, UITableViewDelegate {
         
 
         let removeAction = UIAlertAction(title: "Remove", style: .default) { _ in
-            Task { let result = await sock.remove(path: "|" + itemName)
+            Task { let result = await sock.remove(path: "|" + itemID)
                 if result != "success" {
                     DispatchQueue.main.async {
                         let alertController = UIAlertController(title: "Error", message: result, preferredStyle: .alert)
@@ -160,13 +157,15 @@ extension SharedViewController : UITableViewDataSource, UITableViewDelegate {
         }
         
         let copyAction = UIAlertAction(title: "Copy", style: .default) { _ in
-            toCopy = "|" + itemName
-            toCut = ""
+            copyName = itemName
+            cutName = ""
+            sourceID = itemID
         }
         
         let cutAction = UIAlertAction(title: "Cut", style: .default) { _ in
-            toCut = "|" + itemName
-            toCopy = ""
+            cutName = itemName
+            copyName = ""
+            sourceID = itemID
         }
         
         let changeNameAction = UIAlertAction(title: "Rename", style: .default) { _ in
@@ -181,7 +180,7 @@ extension SharedViewController : UITableViewDataSource, UITableViewDelegate {
                 guard let newName = alertController.textFields?.first?.text, !newName.isEmpty else {
                     return
                 }
-                Task { let result = await sock.rename(oldName: "|"+itemName, newName: "|"+newName)
+                Task { let result = await sock.rename(oldName: "|"+itemID, newName: newName)
                     if result != "success" {
                         DispatchQueue.main.async {
                             let alertController = UIAlertController(title: "Error", message: result, preferredStyle: .alert)
