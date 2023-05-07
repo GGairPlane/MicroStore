@@ -111,6 +111,7 @@ def protocol_build_reply(request, user):
     request_Lst = request.split(b"~")[:2]
     request_Lst.append(b"~".join(request.split(b"~")[2:]))
     request = request_Lst
+    print(request)
     if len(request[1]) > 0 and request[1][0] == ord("|"):
         path = db.get_path_by_id(request[1].decode()[1:])
         filename = os.path.split(path)[1].encode()
@@ -125,7 +126,7 @@ def protocol_build_reply(request, user):
                 reply = "ERROR~201~path does not exists"
         elif request[0] == b"COPYP":
             if copy(
-                os.path.join(user.path, path.decode()),
+                os.path.join(user.path, path),
                 os.path.join(user.path, request[2].decode()),
             ):
                 reply = b"COPAK~" + filename + b"~" + request[2]
@@ -136,6 +137,7 @@ def protocol_build_reply(request, user):
         elif request[0] == b"EXITT":
             reply = "EXTAK~Goodbye"
 
+        
         if perm == "editor" and reply == b"":
             if request[0] == b"REMOV":
                 if remove(path):
@@ -151,19 +153,22 @@ def protocol_build_reply(request, user):
                     reply = "ERROR~201~path does not exists"
             elif request[0] == b"MOVFL":
                 if move(
-                    os.path.join(user.path, path.decode()),
+                    os.path.join(user.path, path),
                     os.path.join(user.path, request[2].decode()),
                 ):
                     reply = b"MOVAK~" + filename + b"~" + request[2]
                 else:
                     reply = "ERROR~202~src path or dst path does not exists"
             elif request[0] == b"SHARE":
-                if db.add_file(
-                    path.decode(),
-                    os.path.join(user.path, request[2].split(b"~")[0].decode()),
-                    request[2].split(b"~")[1].decode(),
-                ):
-                    reply = b"SHRAK~" + path
+                if os.path.isfile(path):
+                    if db.add_file(
+                        path,
+                        os.path.join(user.path, request[2].split(b"~")[0].decode()),
+                        request[2].split(b"~")[1].decode(),
+                    ):
+                        reply = b"SHRAK~" + path
+                    else:
+                        reply = "ERROR~204~could not share"
                 else:
                     reply = "ERROR~204~could not share"
         elif reply == b"":
@@ -246,15 +251,17 @@ def protocol_build_reply(request, user):
                 reply = "ERROR~203~dir already exists"
 
         elif request[0] == b"SHARE":
-            if db.add_file(
-                request[1].decode(),
-                os.path.join(user.path, request[2].split(b"~")[0].decode()),
-                request[2].split(b"~")[1].decode(),
-            ):
-                reply = b"SHRAK~" + request[1]
+            if os.path.isfile(os.path.join(user.path, request[2].split(b"~")[0].decode())):
+                if db.add_file(
+                    request[1].decode(),
+                    os.path.join(user.path, request[2].split(b"~")[0].decode()),
+                    request[2].split(b"~")[1].decode(),
+                ):
+                    reply = b"SHRAK~" + request[1]
+                else:
+                    reply = "ERROR~204~could not share"
             else:
                 reply = "ERROR~204~could not share"
-
         elif request[0] == b"GTSHR":
             reply = b"REGTS~" + db.get_all(user.username)
         elif request[0] == b"EXITT":

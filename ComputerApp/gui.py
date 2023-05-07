@@ -271,6 +271,7 @@ def main():
 
                     elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
                         if curr_dir == "|":
+
                             right_selected = False
                             pg.time.set_timer(timer_event, time_delay, 1)
 
@@ -307,10 +308,12 @@ def main():
                                     glbl.sent = False
 
                                 elif copy_button.rect.collidepoint(event.pos):
-                                    copy = (curr_file.text, os.path.join(curr_dir, "|", curr_file.uuid))
+                                    print("|" + curr_file.uuid)
+
+                                    copy = (curr_file.text, "|"+ curr_file.uuid)
                                     cut = ""
                                 elif cut_button.rect.collidepoint(event.pos):
-                                    cut = (curr_file.text, os.path.join(curr_dir, "|", curr_file.uuid))
+                                    cut = (curr_file.text, "|"+ curr_file.uuid)
                                     copy = ""
                                 elif rename_button.rect.collidepoint(event.pos):
                                     glbl.to_send = protocol_build_request(
@@ -328,36 +331,7 @@ def main():
                                         "download", "|" + curr_file.uuid
                                     )
                                     glbl.sent = False
-                            elif dir_selected:
-                                dir_selected = False
-                                if reomve_button.rect.collidepoint(event.pos):
-                                    glbl.to_send = protocol_build_request(
-                                        "remove", "|" + curr_file.uuid
-                                    )
-                                    glbl.sent = False
-
-                                elif cd_button.rect.collidepoint(event.pos):
-                                    req_dir = "|" + curr_file.uuid
-                                    curr_file = ""
-                                    files.empty()
-
-                                elif copy_button.rect.collidepoint(event.pos):
-                                    copy = "|" + curr_file.uuid
-                                    cut = ""
-                                elif cut_button.rect.collidepoint(event.pos):
-                                    cut = "|" + curr_file.uuid
-                                    copy = ""
-                                elif rename_button.rect.collidepoint(event.pos):
-                                    dir_update = True
-                                    glbl.to_send = protocol_build_request(
-                                        "rename", "|" + curr_file.uuid
-                                    )
-                                    glbl.sent = False
-                                elif share_button.rect.collidepoint(event.pos):
-                                    glbl.to_send = protocol_build_request(
-                                        "share", "|" + curr_file.uuid
-                                    )
-                                    glbl.sent = False
+                            
 
                             for file in files:
                                 if file.rect.collidepoint(event.pos):
@@ -397,7 +371,7 @@ def main():
                                 file_selected = False
                                 dir_selected = False
                             elif back_button.rect.collidepoint(event.pos):
-                                curr_dir = os.path.split(curr_dir)[0]
+                                curr_dir = os.path.dirname(curr_dir) if os.path.dirname(curr_dir) != curr_dir else ""
                                 print(curr_dir)
                                 req_dir = ""
                                 curr_file = ""
@@ -409,7 +383,7 @@ def main():
                                 file_selected = False
                                 if reomve_button.rect.collidepoint(event.pos):
                                     glbl.to_send = protocol_build_request(
-                                        "remove", curr_file.text
+                                        "remove", os.path.join(curr_dir, curr_file.text)
                                     )
                                     glbl.sent = False
 
@@ -440,7 +414,7 @@ def main():
                                 dir_selected = False
                                 if reomve_button.rect.collidepoint(event.pos):
                                     glbl.to_send = protocol_build_request(
-                                        "remove", curr_file.text
+                                        "remove", os.path.join(curr_dir, curr_file.text)
                                     )
                                     glbl.sent = False
 
@@ -481,7 +455,7 @@ def main():
                                         glbl.sent = False
 
                                 elif cut != "":
-                                    if type(copy) == tuple:
+                                    if type(cut) == tuple:
                                         glbl.to_send = protocol_build_request(
                                             "cut", cut[1], os.path.join(curr_dir, cut[0])
                                         )
@@ -495,13 +469,13 @@ def main():
                             elif upload_button.rect.collidepoint(event.pos):
                                 dir_update = True
                                 with threading.Lock():
-                                    glbl.to_send = protocol_build_request("upload")
+                                    glbl.to_send = protocol_build_request("upload", curr_dir)
 
                                 time.sleep(0.1)
                                 glbl.sent = False
 
                             elif mkdir_button.rect.collidepoint(event.pos):
-                                glbl.to_send = protocol_build_request("new dir")
+                                glbl.to_send = protocol_build_request("new dir", curr_dir)
                                 glbl.sent = False
 
                             for file in files:

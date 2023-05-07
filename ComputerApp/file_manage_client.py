@@ -4,7 +4,7 @@ from tkinter import filedialog
 import glbl
 
 
-def upload_file():
+def upload_file(path):
     glbl.sent = True
     """
     upload file to server
@@ -14,9 +14,9 @@ def upload_file():
 
     with filedialog.askopenfile(mode="rb") as f:
         data = f.read()
-        file_name = os.path.basename(f.name)
+        file_name = os.path.join(path, os.path.basename(f.name).encode())
     try:
-        to_return = file_name.encode() + b"~" + data
+        to_return = file_name + b"~" + data
     except Exception as e:
         print(f"error opening file: {e}")
 
@@ -65,7 +65,7 @@ def rename(old_name):
     )
 
 
-def makedir():
+def makedir(path):
     dir = "new dir"
     root = tkinter.Tk()
     root.title("New Dir")
@@ -87,7 +87,9 @@ def makedir():
     dir = dir.replace("\\", "")
     dir = dir.replace(" ", "_")
     dir = dir.replace("~", "")
-    return dir.encode()
+    dir = dir.replace("|", "")
+
+    return os.path.join(path, dir.encode())
 
 
 def share():
@@ -110,16 +112,17 @@ def share():
     canvas1.create_window(200, 180, window=button1)
 
     perm = tkinter.StringVar()
+    perm.set("viewer")
     R1 = tkinter.Radiobutton(root, text="viewer", variable=perm, value="viewer")
     R1.pack(anchor=tkinter.W)
     canvas1.create_window(200, 60, window=R1)
+    R1.select()
     R2 = tkinter.Radiobutton(root, text="editor", variable=perm, value="editor")
     R2.pack(anchor=tkinter.W)
     canvas1.create_window(200, 80, window=R2)
+    R2.deselect()
 
-    R3 = tkinter.Radiobutton(root, text="owner", variable=perm, value="owner")
-    R3.pack(anchor=tkinter.W)
-    canvas1.create_window(200, 100, window=R3)
+
 
     root.mainloop()
 

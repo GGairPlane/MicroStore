@@ -70,7 +70,7 @@ def protocol_build_request(cmd, path1=None, path2=None):
         elif cmd == "remove":
             return b"REMOV~" + path1
         elif cmd == "upload":
-            return b"UPLOD~" + upload_file()
+            return b"UPLOD~"  + upload_file(path1)
         elif cmd == "download":
             return b"DWNLD~" + path1
         elif cmd == "cut":
@@ -80,7 +80,7 @@ def protocol_build_request(cmd, path1=None, path2=None):
         elif cmd == "rename":
             return b"CHGNM~" + rename(path1)
         elif cmd == "new dir":
-            return b"MKDIR~" + makedir()
+            return b"MKDIR~" + makedir(path1)
         elif cmd == "share":
             name, perm = share()
             return b"SHARE~" + name + b"~" + path1 + b"~" + perm

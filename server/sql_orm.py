@@ -71,6 +71,31 @@ class UserFileORM:
         self.close_DB()
         return to_return
     
+    
+    def delete_file(self, path):
+        self.open_DB()
+        
+        sql = f"""DELETE FROM shares WHERE id=(SELECT id FROM files WHERE path='{path}');
+                    DELETE FROM files  WHERE path='{path}';"""
+
+        to_return = True
+        try:
+            self.current.executescript(sql)
+        except Exception as e:
+            print(e)
+            to_return = False
+        self.commit()
+        self.close_DB()
+        return to_return
+    
+    def change_name(self, old_name, new_name):
+        self.open_DB()
+        sql = f" UPDATE files SET path='{new_name}'WHERE path='{old_name}'"
+        self.current.execute(sql)
+      
+        self.commit()
+        self.close_DB()
+    
     def get_path_by_id(self, id):
         self.open_DB()
         sql = f"SELECT path FROM files WHERE '{id}'=id"

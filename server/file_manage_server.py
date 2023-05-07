@@ -1,6 +1,7 @@
 import os
 import json
 import shutil
+import sql_orm
 
 
 def lsdir(dir):
@@ -17,8 +18,9 @@ def lsdir(dir):
 
 
 def remove(path):
-    print(path)
     if os.path.isfile(path):
+        db = sql_orm.UserFileORM()
+        db.delete_file(path)
         os.remove(path)
         return True
     elif os.path.isdir(path):
@@ -28,7 +30,7 @@ def remove(path):
 
 
 def copy(src, dst):
-    if os.path.exists(dst):
+    while os.path.exists(dst):
         dst = os.path.splitext(dst)[0] + "_copy" + os.path.splitext(dst)[1]
     if os.path.exists(src):
         shutil.copy(src, dst)
@@ -37,10 +39,12 @@ def copy(src, dst):
 
 
 def move(src, dst):
-    if os.path.exists(dst):
+    while os.path.exists(dst):
         dst = os.path.splitext(dst)[0] + "_copy" + os.path.splitext(dst)[1]
     if os.path.exists(src):
         shutil.move(src, dst)
+        db = sql_orm.UserFileORM()
+        db.delete_file(src)
         return True
     return False
 
@@ -48,6 +52,8 @@ def move(src, dst):
 def rename(src, dst):
     if os.path.exists(src):
         os.rename(src, dst)
+        db = sql_orm.UserFileORM()
+        db.change_name(src, dst)
         return True
     return False
 
