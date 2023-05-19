@@ -30,6 +30,17 @@ class UserFileORM:
         self.commit()
         self.close_DB()
         
+    def create_table(self, table_name):
+        self.open_DB()
+        sql = f"""CREATE TABLE {table_name} (
+                        id text PRIMARY KEY,
+                        path text NOT NULL,
+                        perms text NOT NULL
+        );"""
+        
+        self.current.execute(sql)
+        self.commit()
+        self.close_DB()
     
     def get_all(self, user):
         self.open_DB()
