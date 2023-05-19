@@ -48,7 +48,7 @@ public class SocketManager {
         let headerData = String(format: "%0\(SIZE_HEADER_SIZE - 1)d|", data.count)
         let combinedData = headerData.data(using: .utf8)! + data
         
-        let bytesSent = combinedData.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) -> Int in
+        let _ = combinedData.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) -> Int in
             if let baseAddress = bytes.baseAddress {
                 return Darwin.send(socketFD, baseAddress, combinedData.count, 0)
             } else {
@@ -89,19 +89,20 @@ public class SocketManager {
             
             while data.count < dataLen {
                 var buffer = [UInt8](repeating: 0, count: dataLen - data.count)
+                print("len: \(buffer.count)")
                 let bytesRead = Darwin.recv(socketFD, &buffer, buffer.count, 0)
 
                 if bytesRead == 0 {
                     data = Data()
                     break
                 }
-                data.append(contentsOf: buffer)
+                data.append(contentsOf: buffer.prefix(bytesRead))
             }
             
         }
         
         if TCP_DEBUUG && !sizeHeader.isEmpty {
-            print("\nRecv(\(data.count))>>>", sizeHeader.asciiEncodedString() + data.prefix(min(data.count, LEN_TO_PRINT)).asciiEncodedString())
+            print("\nRecv(\(data.count))>>>", sizeHeader.asciiEncodedString() +  data.prefix(LEN_TO_PRINT).asciiEncodedString())
         }
         
         if dataLen != data.count {
@@ -149,7 +150,7 @@ public class SecureSocketManager {
     public func recv() async -> Data? {
         if let encryptedData = await socket.recv(), let cipher = cipher {
             let decryptedData = cipher.decrypt(data: encryptedData)
-            print("\nC LOG:Recieved <<< ", decryptedData?.asciiEncodedString() ?? "no data")
+            print("\nC LOG:Recieved <<< ", decryptedData?.prefix(LEN_TO_PRINT).asciiEncodedString() ?? "no data")
             return decryptedData
         } else {
             return await socket.recv()

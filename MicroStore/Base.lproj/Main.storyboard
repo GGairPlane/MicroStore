@@ -74,8 +74,8 @@
                                     <action selector="SignUpButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="j8U-Nb-vjI"/>
                                 </connections>
                             </button>
-                            <textField opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="248" contentHorizontalAlignment="left" contentVerticalAlignment="center" text="10.0.0.10" borderStyle="roundedRect" placeholder="IP" textAlignment="center" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="cT6-LK-9Gc">
-                                <rect key="frame" x="154" y="494" width="85" height="34"/>
+                            <textField opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="248" contentHorizontalAlignment="left" contentVerticalAlignment="center" text="192.168.99.132" borderStyle="roundedRect" placeholder="IP" textAlignment="center" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="cT6-LK-9Gc">
+                                <rect key="frame" x="133.66666666666666" y="494" width="125.99999999999997" height="34"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                 <textInputTraits key="textInputTraits" autocorrectionType="no" keyboardType="numbersAndPunctuation" returnKeyType="done" textContentType="url"/>
                             </textField>
@@ -258,7 +258,6 @@
         <!--Navigation Controller-->
         <scene sceneID="xre-1c-PKM">
             <objects>
-                <placeholder placeholderIdentifier="IBFirstResponder" id="26P-Mv-3iY" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
                 <navigationController storyboardIdentifier="Navigation_Controller" automaticallyAdjustsScrollViewInsets="NO" navigationBarHidden="YES" id="UR2-nm-uDS" sceneMemberID="viewController">
                     <toolbarItems/>
                     <navigationBar key="navigationBar" contentMode="scaleToFill" id="nzi-CJ-6wU">
@@ -272,6 +271,7 @@
                         <segue destination="BYZ-38-t0r" kind="relationship" relationship="rootViewController" id="Ebs-ho-fVu"/>
                     </connections>
                 </navigationController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="26P-Mv-3iY" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="20.610687022900763" y="3.5211267605633805"/>
         </scene>
