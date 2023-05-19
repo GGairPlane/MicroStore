@@ -3,7 +3,7 @@ import threading
 import time
 
 import pickle
-import hashlib
+import hashlib, base64
 import random
 import string
 
