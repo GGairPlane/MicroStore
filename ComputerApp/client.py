@@ -5,7 +5,7 @@ import random
 from file_manage_client import *
 from tcp_by_size import *
 import glbl
-import base64, hashlib
+import hashlib
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Cipher import AES
