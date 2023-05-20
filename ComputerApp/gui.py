@@ -10,10 +10,14 @@ from tcp_by_size import *
 
 from client import *
 
+# Setting the refresh rate of the application
 REFRESH_RATE = 60
 
 
 def init():
+    """
+    Function to initialize the pygame application with specific display settings
+    """
     global win, clock, bg1, bg2
     pg.init()
     os.chdir(os.path.split(os.path.realpath(__file__))[0])
@@ -28,6 +32,9 @@ def init():
 
 
 def reset():
+    """
+    Function to reset global variables
+    """
     global to_send, sent, t_die, tid, threads, recieve, recieved
     glbl.to_send = b""
     glbl.sent = True
@@ -39,26 +46,35 @@ def reset():
 
 
 def main():
+    """
+    Main function where the application's main loop runs.
+    Manages user interactions with the GUI.
+    """
     global win, tid, threads
     glbl.globals()
     init()
 
+    # Instantiate input fields for user credentials and server IP address
     username = InputBox(890, 500, 200, 32, "username")
     password = PassBox(890, 650, 200, 32, "password")
     ip_box = InputBox(245, 262, 250, 32, "127.0.0.1")
     input_boxes = [username, password, ip_box]
 
+    # Instantiate buttons for different user actions
     login_button = Button((209, 225, 255), 850, 300, 100, 100, 0, "login", (0, 0, 0))
     signup_button = Button((209, 225, 255), 1050, 300, 100, 100, 0, "signup", (0, 0, 0))
     join_button = Button(
         (209, 225, 255), 950, 780, 100, 100, 0, "Join", (209, 225, 255)
     )
 
+    # Main loop for application, handling events and user interactions
     run = True
     while run:
         try:
+            # Resetting global variables
             reset()
 
+            # Login variables
             loggedin = False
             login_type = "l"
             selected = pg.Rect(
@@ -68,9 +84,11 @@ def main():
                 110,
             )
 
+            # Checking if user is logged in
             while not loggedin:
                 for event in pg.event.get():
                     if event.type == pg.QUIT:
+                        # Terminate the program if QUIT event is triggered
                         glbl.t_die.append("all")
                         if "t" in locals():
                             t.join()
@@ -100,6 +118,7 @@ def main():
                                     110,
                                 )
                             elif join_button.rect.collidepoint(event.pos):
+                                # Create a thread to handle client tasks
                                 t = threading.Thread(
                                     target=main_client, args=((tid, ip_box.text))
                                 )
@@ -130,6 +149,7 @@ def main():
                                         t.join(0.1)
                                         raise Restart
 
+                # Updating the display
                 win.blit(bg1, (0, 0))
 
                 for box in input_boxes:
@@ -145,6 +165,7 @@ def main():
             time_delay = 1000
             timer_event = pg.USEREVENT + 1
 
+            # Button instances for different actions
             download_button = Button(
                 (54, 76, 111), 0, 0, 150, 75, 0, "Download", (209, 225, 255)
             )
@@ -189,6 +210,7 @@ def main():
                 (54, 76, 111), 0, 0, 150, 75, 0, "New Dir", (209, 225, 255)
             )
 
+            # File and directory management variables
             dir_update = False
             req_dir = ""
             curr_dir = ""
@@ -271,7 +293,6 @@ def main():
 
                     elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
                         if curr_dir == "|":
-
                             right_selected = False
                             pg.time.set_timer(timer_event, time_delay, 1)
 
@@ -298,7 +319,6 @@ def main():
                                 file_selected = False
                                 dir_selected = False
 
-
                             elif file_selected:
                                 file_selected = False
                                 if reomve_button.rect.collidepoint(event.pos):
@@ -310,10 +330,10 @@ def main():
                                 elif copy_button.rect.collidepoint(event.pos):
                                     print("|" + curr_file.uuid)
 
-                                    copy = (curr_file.text, "|"+ curr_file.uuid)
+                                    copy = (curr_file.text, "|" + curr_file.uuid)
                                     cut = ""
                                 elif cut_button.rect.collidepoint(event.pos):
-                                    cut = (curr_file.text, "|"+ curr_file.uuid)
+                                    cut = (curr_file.text, "|" + curr_file.uuid)
                                     copy = ""
                                 elif rename_button.rect.collidepoint(event.pos):
                                     glbl.to_send = protocol_build_request(
@@ -331,7 +351,6 @@ def main():
                                         "download", "|" + curr_file.uuid
                                     )
                                     glbl.sent = False
-                            
 
                             for file in files:
                                 if file.rect.collidepoint(event.pos):
@@ -371,13 +390,17 @@ def main():
                                 file_selected = False
                                 dir_selected = False
                             elif back_button.rect.collidepoint(event.pos):
-                                curr_dir = os.path.dirname(curr_dir) if os.path.dirname(curr_dir) != curr_dir else ""
+                                curr_dir = (
+                                    os.path.dirname(curr_dir)
+                                    if os.path.dirname(curr_dir) != curr_dir
+                                    else ""
+                                )
                                 print(curr_dir)
                                 req_dir = ""
                                 curr_file = ""
                                 files.empty()
                                 file_selected = False
-                                dir_selected = False                            
+                                dir_selected = False
 
                             elif file_selected:
                                 file_selected = False
@@ -445,9 +468,11 @@ def main():
                                 if copy != "":
                                     if type(copy) == tuple:
                                         glbl.to_send = protocol_build_request(
-                                            "copy", copy[1], os.path.join(curr_dir, copy[0])
+                                            "copy",
+                                            copy[1],
+                                            os.path.join(curr_dir, copy[0]),
                                         )
-                                        glbl.sent = False                                        
+                                        glbl.sent = False
                                     else:
                                         glbl.to_send = protocol_build_request(
                                             "copy", copy, os.path.join(curr_dir, copy)
@@ -457,7 +482,9 @@ def main():
                                 elif cut != "":
                                     if type(cut) == tuple:
                                         glbl.to_send = protocol_build_request(
-                                            "cut", cut[1], os.path.join(curr_dir, cut[0])
+                                            "cut",
+                                            cut[1],
+                                            os.path.join(curr_dir, cut[0]),
                                         )
                                         glbl.sent = False
                                     else:
@@ -469,13 +496,17 @@ def main():
                             elif upload_button.rect.collidepoint(event.pos):
                                 dir_update = True
                                 with threading.Lock():
-                                    glbl.to_send = protocol_build_request("upload", curr_dir)
+                                    glbl.to_send = protocol_build_request(
+                                        "upload", curr_dir
+                                    )
 
                                 time.sleep(0.1)
                                 glbl.sent = False
 
                             elif mkdir_button.rect.collidepoint(event.pos):
-                                glbl.to_send = protocol_build_request("new dir", curr_dir)
+                                glbl.to_send = protocol_build_request(
+                                    "new dir", curr_dir
+                                )
                                 glbl.sent = False
 
                             for file in files:

@@ -1,19 +1,12 @@
-//
-//  SharedViewController.swift
-//  MicroStore
-//
-//  Created by Tomer Volloch on 25/04/2023.
-//
-
 import UIKit
-
+// This class handles the displaying and interaction with shared files.
 class SharedViewController: UIViewController {
     
-    @IBOutlet weak var tableView: UITableView!
+    @IBOutlet weak var tableView: UITableView! // Table view to display files
     
-    var files: [SharedItem] = []
+    var files: [SharedItem] = [] // Array to store files
         
-    
+    // Method to refresh data from the server and reload table view.
     func refreshData() {
         Task {
             let files = await sock.getShared()
@@ -24,7 +17,7 @@ class SharedViewController: UIViewController {
         }
     }
 
-    
+    // Method called when view loads. It sets table view's data source and delegate.
     override func viewDidLoad() {
         super.viewDidLoad()
                 
@@ -36,26 +29,17 @@ class SharedViewController: UIViewController {
         super.viewWillAppear(animated)
         refreshData()
     }
-    
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }
 
+// Extension to conform to UITableViewDataSource and UITableViewDelegate protocols
 extension SharedViewController : UITableViewDataSource, UITableViewDelegate {
     
+    // Returns the number of files.
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return files.count
     }
     
+    // Sets up each cell with the appropriate file's data.
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell =  tableView.dequeueReusableCell(withIdentifier: "fileCell", for: indexPath)
         cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 16.0)
@@ -66,7 +50,7 @@ extension SharedViewController : UITableViewDataSource, UITableViewDelegate {
         return cell
     }
     
-    
+    // Defines actions upon selecting a file from the table.
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         let itemName = files[indexPath.row].name
@@ -214,10 +198,9 @@ extension SharedViewController : UITableViewDataSource, UITableViewDelegate {
     }
 }
 
-
+// Struct representing a shared file.
 struct SharedItem {
-    let name: String
-    let perm: String
-    let uuid: String
-    
+    let name: String // Name of the file
+    let perm: String // Permission status of the file
+    let uuid: String // Unique identifier of the file
 }

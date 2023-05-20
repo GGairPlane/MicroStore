@@ -1,28 +1,25 @@
-//
-//  ExplorerViewController.swift
-//  MicroStore
-//
-//  Created by Tomer Volloch on 11/04/2023.
-//
-
 import UIKit
 import UniformTypeIdentifiers
 
+// Global variables used for copy and cut
 var copyName: String = ""
 var cutName: String = ""
 var sourceID: String = ""
 
+// This is the main View Controller that is responsible for the File Explorer UI
 class ExplorerViewController: UIViewController {
     
     @IBOutlet weak var backButton: UIButton!
     @IBOutlet weak var tableView: UITableView!
     
+    // Lists to hold directory and file names
     var dirs: [String] = []
     var files: [String] = []
     
+    // Holds the current path the user is viewing
     var currPath: String = ""
     
-
+    // This function fetches the current directory's content and refreshes the TableView
     func refreshData() {
         Task {
             let (dirs, files) = await sock.getDir(path: currPath)
@@ -34,7 +31,7 @@ class ExplorerViewController: UIViewController {
         }
     }
     
-    
+    // Called when the view is initially loaded
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -43,38 +40,43 @@ class ExplorerViewController: UIViewController {
         backButton.isHidden = currPath.isEmpty
     }
     
-    
+    // Called when the view is about to be added to a view hierarchy
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         refreshData()
     }
     
+    // Action performed when the back button is tapped
     @IBAction func backButtonTapped(_ sender: UIButton) {
         navigationController?.popViewController(animated: true)
     }
 }
 
-
+// Extension for implementing TableView delegate and datasource methods
 extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
     
+    // Define the number of sections in the table view
     func numberOfSections(in tableView: UITableView) -> Int {
         return 2
     }
     
+    // Define the number of rows in each section of the table view
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return section == 0 ? dirs.count : files.count
     }
     
+    // Provide a cell object for each row
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell =  tableView.dequeueReusableCell(withIdentifier: "fileCell", for: indexPath)
         cell.textLabel?.font = UIFont.boldSystemFont(ofSize: 16.0)
-        if indexPath.section == 0 {
+        
+        if indexPath.section == 0 { // if the cell is for directory
             cell.textLabel?.text = dirs[indexPath.row]
             cell.detailTextLabel?.text = "<DIR>"
             cell.detailTextLabel?.font = UIFont.boldSystemFont(ofSize: 16.0)
 
             
-        } else {
+        } else { // if the cell is for file
             cell.textLabel?.text = files[indexPath.row]
             cell.detailTextLabel?.text = ""
 
@@ -82,6 +84,7 @@ extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
         return cell
     }
     
+    // Handle cell selection
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         let isDirectory = indexPath.section == 0
@@ -241,9 +244,10 @@ extension ExplorerViewController :  UITableViewDataSource, UITableViewDelegate{
     }
 }
 
-
+// Extension for implementing UIDocumentPickerDelegate methods
 extension ExplorerViewController : UIDocumentPickerDelegate {
     
+    // Action for opening the menu
     @IBAction func openMenu(_ sender: UIButton) {
         let uploadFileAction = UIAction(title: "Upload File") { _ in
             let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.data])

@@ -70,7 +70,7 @@ def protocol_build_request(cmd, path1=None, path2=None):
         elif cmd == "remove":
             return b"REMOV~" + path1
         elif cmd == "upload":
-            return b"UPLOD~"  + upload_file(path1)
+            return b"UPLOD~" + upload_file(path1)
         elif cmd == "download":
             return b"DWNLD~" + path1
         elif cmd == "cut":
@@ -188,8 +188,6 @@ def main_client(tid, ip):
                     reply_Lst = glbl.recieve.split(b"~")[:2]
                     reply_Lst.append(b"~".join(glbl.recieve.split(b"~")[2:]))
                     reply = reply_Lst
-
-                    # print('Server return an error: ' + glbl.recieve.decode())
                     simplifed = (
                         "error code: " + reply[1].decode() + " - " + reply[2].decode()
                     )
@@ -211,6 +209,7 @@ def main_client(tid, ip):
     except socket.error as err:
         print(f"Got socket error: {err}")
 
+    # The main loop for handling client-server communication.
     while connected:
         if tid in glbl.t_die or "all" in glbl.t_die:
             break

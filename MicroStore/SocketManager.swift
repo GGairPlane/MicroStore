@@ -1,41 +1,36 @@
-//
-//  SocketManager.swift
-//  MicroStore
-//
-//  Created by Tomer Volloch on 22/04/2023.
-//
-
 import Foundation
 import Darwin
 import CryptoSwift
 import CommonCrypto
 
-
+// Constants for socket communication
 let SIZE_HEADER_FORMAT = "000000000|"
 let SIZE_HEADER_SIZE = SIZE_HEADER_FORMAT.count
 let TCP_DEBUUG = true
 let LEN_TO_PRINT = 100
 
-
+// Singleton class to manage socket communication
 public class SocketManager {
+    // Singleton instance
     public static let shared = SocketManager()
     
-    //    private let socketQueue = DispatchQueue(label: "socketQueue")
+    // File descriptor of the socket
     private(set) var socketFD: Int32 = -1
-    private var cipher: String?
     
-    private init() {}
+    private init() {} // Private initializer to prevent other instances from being created
     
-    
-    
-    public func connect(host: String, port: UInt16) async -> Void{
+    // Connects to a host using a specified port
+    public func connect(host: String, port: UInt16) async {
+        // Create a socket
         self.socketFD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
         
+        // Set up server address
         var serverAddress = sockaddr_in()
         serverAddress.sin_family = sa_family_t(AF_INET)
         serverAddress.sin_port = UInt16(port).bigEndian
         inet_pton(AF_INET, host, &serverAddress.sin_addr)
         
+        // Connect to the server
         _ = withUnsafePointer(to: &serverAddress) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                 Darwin.connect(socketFD, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
@@ -43,11 +38,13 @@ public class SocketManager {
         }
     }
     
-    
+    // Sends data to the connected host
     public func send(_ data: Data) {
+        // Prepare the data to be sent
         let headerData = String(format: "%0\(SIZE_HEADER_SIZE - 1)d|", data.count)
         let combinedData = headerData.data(using: .utf8)! + data
         
+        // Send the data
         let _ = combinedData.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) -> Int in
             if let baseAddress = bytes.baseAddress {
                 return Darwin.send(socketFD, baseAddress, combinedData.count, 0)
@@ -60,7 +57,7 @@ public class SocketManager {
         }
     }
     
-    
+    // Receives data from the connected host
     public func recv() async -> Data? {
         
         var sizeHeader = Data()
@@ -112,19 +109,24 @@ public class SocketManager {
         return data
         
     }
-    
+    // Closes the connection
     public func close(){
         Darwin.close(socketFD)
     }
 }
+
+// Class that extends SocketManager to provide secure (encrypted) socket communication
 public class SecureSocketManager {
-    // Add a private var cipher of the type AESCipher
+    // AES cipher for encryption and decryption
+
+    public static let shared = SecureSocketManager()
+
     private var cipher: AESCipher?
     private let socket = SocketManager.shared
     
-    public init() {}
+    private init() {}
     
-    // Override the connect method to include Diffie-Hellman key exchange
+    // Connects to a TCP/IP host using a specified port and performs Diffie-Hellman key exchange
     public func connect(host: String, port: UInt16) async throws {
         // Call the original connect method
         await socket.connect(host: host, port: port)
@@ -135,7 +137,7 @@ public class SecureSocketManager {
 
     }
     
-    // Override the send method to encrypt data using the cipher
+    // Sends encrypted data to the connected host
     public func send(_ data: Data) {
         print("\nC LOG:Sent >>> ", data.prefix(LEN_TO_PRINT).asciiEncodedString())
         if let cipher = cipher {
@@ -146,7 +148,7 @@ public class SecureSocketManager {
         }
     }
     
-    // Override the recv method to decrypt data using the cipher
+    // Receives encrypted data from the connected host and decrypts it
     public func recv() async -> Data? {
         if let encryptedData = await socket.recv(), let cipher = cipher {
             let decryptedData = cipher.decrypt(data: encryptedData)
@@ -157,10 +159,12 @@ public class SecureSocketManager {
         }
     }
     
+    // Closes the connection
     public func close() {
         socket.close()
     }
-    
+
+    // This function conducts a Diffie-Hellman key exchange over the given socket
     private func dh() async -> String? {
         guard let p = Int(String(decoding: await socket.recv()!, as: UTF8.self))
             else {return nil}
@@ -173,7 +177,8 @@ public class SecureSocketManager {
         socket.send(Data(String(b).utf8))
         return String(modPow(base: a, expo: secret, mod: p))
     }
-    
+
+    // This function performs the modular exponentiation operation, which is used in the Diffie-Hellman key exchange.
     private func modPow(base: Int, expo: Int, mod: Int) -> Int {
         if mod == 1 { return 0 }
         var result = 1
@@ -237,7 +242,7 @@ class AESCipher {
     }
 }
 
-
+// Extension on `SecureSocketManager` class that contains the protocol itself.
 extension SecureSocketManager {
     func login(username: String, password: String) async -> String {
         let toSend = "LOGIN~\(username)~\(password)"
@@ -249,7 +254,6 @@ extension SecureSocketManager {
         else {
             return response?.replacingOccurrences(of: "~", with: ":") ?? "connection error"
         }
-        
     }
     
     func signup(username: String, password: String) async -> String {
@@ -488,14 +492,7 @@ enum SocketError : Error {
 }
 
 
-import Foundation
-import CryptoKit
-
-func md5Checksum(data: Data) -> String {
-    let digest = Insecure.MD5.hash(data: data)
-    return digest.map { String(format: "%02hhx", $0) }.joined()
-}
-
+// Extension for Data that returns a printable string of the Data
 extension Data {
     func asciiEncodedString() -> String {
         return self.reduce("") { (result, byte) -> String in

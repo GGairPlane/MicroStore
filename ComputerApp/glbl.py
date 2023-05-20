@@ -1,8 +1,7 @@
-
 def globals():
     global to_send, sent, recieve, recieved, t_die
-    to_send = b''
+    to_send = b""
     sent = True
-    recieve = b''
+    recieve = b""
     recieved = False
     t_die = []

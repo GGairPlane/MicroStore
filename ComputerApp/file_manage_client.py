@@ -5,11 +5,17 @@ import glbl
 
 
 def upload_file(path):
+    """
+    Function to upload file to server.
+
+    Args:
+        path (str): The path where the uploaded file should be saved.
+
+    Returns:
+        to_return (bytes): The path and content of the file to be uploaded.
+    """
     glbl.sent = True
-    """
-    upload file to server
-    return: void
-    """
+
     tkinter.Tk().withdraw()
 
     with filedialog.askopenfile(mode="rb") as f:
@@ -25,6 +31,15 @@ def upload_file(path):
 
 
 def download_file(reply):
+    """
+    Function to download file from server.
+
+    Args:
+        reply (bytes): The server's response containing file name and data.
+
+    Returns:
+        str: The file name if downloaded successfully; otherwise error message.
+    """
     try:
         tkinter.Tk().withdraw()
 
@@ -38,6 +53,15 @@ def download_file(reply):
 
 
 def rename(old_name):
+    """
+    Function to rename the file or directory.
+
+    Args:
+        old_name (bytes): The original name of the file or directory.
+
+    Returns:
+        bytes: The old and new path of the file or directory.
+    """
     old_name = old_name.decode()
     name = os.path.split(old_name)[1]
     root = tkinter.Tk()
@@ -66,6 +90,15 @@ def rename(old_name):
 
 
 def makedir(path):
+    """
+    Function to create a new directory.
+
+    Args:
+        path (bytes): The path where the new directory should be created.
+
+    Returns:
+        bytes: The path of the new directory.
+    """
     dir = "new dir"
     root = tkinter.Tk()
     root.title("New Dir")
@@ -93,6 +126,12 @@ def makedir(path):
 
 
 def share():
+    """
+    Function to manage access rights to a file or directory.
+
+    Returns:
+        tuple: The name and permission level (viewer/editor) of the user.
+    """
     name = ""
     root = tkinter.Tk()
     root.title("Share")
@@ -121,8 +160,6 @@ def share():
     R2.pack(anchor=tkinter.W)
     canvas1.create_window(200, 80, window=R2)
     R2.deselect()
-
-
 
     root.mainloop()
 

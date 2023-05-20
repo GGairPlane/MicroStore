@@ -11,7 +11,6 @@ from tcp_by_size import *
 from file_manage_server import *
 from classes import *
 import sql_orm
-from gui_classes import *
 
 from Crypto.Util.number import getPrime
 from Crypto.Random import get_random_bytes
@@ -19,11 +18,18 @@ from Crypto.Util.Padding import pad, unpad
 from Crypto.Cipher import AES
 
 
+# Boolean variables used to control program behavior.
 all_to_die = False
 disconnect_all = False
 
 
 def dh(cli_sock):
+    """
+    Diffie-Hellman key exchange protocol implementation.
+
+    :param cli_sock: client socket
+    :return: computed shared secret key
+    """
     p = getPrime(30)
     send_with_size(cli_sock, str(p).encode())
     g = int(recv_by_size(cli_sock).decode())
@@ -35,16 +41,34 @@ def dh(cli_sock):
 
 
 class AESCipher(object):
+    """
+    AES Encryption/Decryption class.
+
+    :param key: shared secret key
+    """
+
     def __init__(self, key):
         self.key = hashlib.sha256(key.encode()).digest()
 
     def encrypt(self, data):
+        """
+        Encrypts data using AES encryption.
+
+        :param data: plain text data
+        :return: encrypted data
+        """
         iv = get_random_bytes(AES.block_size)
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
         encrypted_data = cipher.encrypt(pad(data, AES.block_size))
         return iv + encrypted_data
 
     def decrypt(self, data):
+        """
+        Decrypts data using AES decryption.
+
+        :param data: encrypted data
+        :return: plain text data
+        """
         iv = data[: AES.block_size]
         cipher = AES.new(self.key, AES.MODE_CBC, iv)
         decrypted_data = unpad(cipher.decrypt(data[AES.block_size :]), AES.block_size)
@@ -53,8 +77,12 @@ class AESCipher(object):
 
 def logtcp(dir, tid, byte_array):
     """
-    log direction, tid and all TCP byte array data
-    return: void
+    Logs TCP connection details.
+
+    :param dir: direction of data
+    :param tid: thread id
+    :param byte_array: data in bytes
+    :return: None
     """
     if dir == "sent":
         print(f"{tid} S LOG:Sent     >>> {byte_array[:100]}")
@@ -64,9 +92,10 @@ def logtcp(dir, tid, byte_array):
 
 def signup(request):
     """
-    Signup logic
-    :param request: b"SGNUP~username~password"
-    :return:
+    Handles user signup process.
+
+    :param request: Signup request containing username and password in the format: b"SGNUP~username~password"
+    :return: Response message indicating the success or failure of the operation
     """
     global users
     request = request.split("~")
@@ -82,9 +111,10 @@ def signup(request):
 
 def login(request):
     """
-    Login logic
-    :param request: b"LOGIN~username~password"
-    :return:
+    Handles user login process.
+
+    :param request: Login request containing username and password in the format: b"LOGIN~username~password"
+    :return: Response message indicating the success or failure of the operation
     """
     global users
     request = request.split("~")
@@ -117,7 +147,7 @@ def protocol_build_reply(request, user):
         filename = os.path.split(path)[1].encode()
         perm = db.get_perm(request[1].decode()[1:], user.username)
         reply = b""
-        
+
         if request[0] == b"DWNLD":
             file = get_file(path)
             if file:
@@ -137,7 +167,6 @@ def protocol_build_reply(request, user):
         elif request[0] == b"EXITT":
             reply = "EXTAK~Goodbye"
 
-        
         if perm == "editor" and reply == b"":
             if request[0] == b"REMOV":
                 if remove(path):
@@ -251,7 +280,9 @@ def protocol_build_reply(request, user):
                 reply = "ERROR~203~dir already exists"
 
         elif request[0] == b"SHARE":
-            if os.path.isfile(os.path.join(user.path, request[2].split(b"~")[0].decode())):
+            if os.path.isfile(
+                os.path.join(user.path, request[2].split(b"~")[0].decode())
+            ):
                 if db.add_file(
                     request[1].decode(),
                     os.path.join(user.path, request[2].split(b"~")[0].decode()),
@@ -362,67 +393,6 @@ def handle_client(sock, tid, addr):
     sock.close()
 
 
-def gui():
-    global win, clock, all_to_die, disconnect_all, users
-    pg.init()
-    os.chdir(os.path.split(os.path.realpath(__file__))[0])
-    clock = pg.time.Clock()
-    win = pg.display.set_mode((1920, 1080))
-
-    # username = InputBox(890, 500, 200, 32, "username")
-    # password = PassBox(890, 650, 200, 32, "password")
-    # ip_box = InputBox(245, 262, 250, 32, "127.0.0.1")
-    # input_boxes = [username, password, ip_box]
-
-    logout_button = Button(
-        (209, 225, 255), 850, 300, 150, 100, 0, "Disconnect all", (0, 0, 0)
-    )
-    delete_button = Button(
-        (209, 225, 255), 1050, 300, 150, 100, 0, "Delete all", (0, 0, 0)
-    )
-    # join_button = Button((209,225,255), 950, 780, 100, 100, 0, "Join", (209,225,255))
-    while not all_to_die:
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                pg.quit()
-                all_to_die = True
-                return
-
-            elif event.type == pg.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    if logout_button.rect.collidepoint(event.pos):
-                        for user in users.values():
-                            user.curr_dir = user.path
-                            #user.copied = None, 0
-                            user.connected = False
-                            disconnect_all = True
-                            print(user, "disconnected")
-
-                    elif delete_button.rect.collidepoint(event.pos):
-                        disconnect_all = True
-
-                        users = {}
-                        with open(
-                            os.path.join(
-                                os.path.split(os.path.realpath(__file__))[0],
-                                "users.pickle",
-                            ),
-                            "wb",
-                        ) as f:
-                            pickle.dump(users, f)
-                        for dir in os.listdir("users"):
-                            shutil.rmtree(os.path.join("users", dir))
-                            print(dir, "deleted")
-                        if os.path.exists("userfile.db"):
-                            os.remove("userfile.db")
-                        db.create()
-
-            logout_button.draw(win)
-            delete_button.draw(win)
-            pg.display.update()
-            clock.tick(60)
-
-
 def main():
     global all_to_die
     global users
@@ -452,10 +422,6 @@ def main():
     # next line release the port
     srv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     srv_sock.settimeout(3)
-
-    t = threading.Thread(target=gui)
-    t.start()
-    threads.append(t)
 
     i = 1
 
