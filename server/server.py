@@ -393,7 +393,7 @@ def gui():
                     if logout_button.rect.collidepoint(event.pos):
                         for user in users.values():
                             user.curr_dir = user.path
-                            user.copied = None, 0
+                            #user.copied = None, 0
                             user.connected = False
                             disconnect_all = True
                             print(user, "disconnected")

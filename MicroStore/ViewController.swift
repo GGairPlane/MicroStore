@@ -2,7 +2,7 @@
 //  ViewController.swift
 //  MicroStore
 //
-//  Created by Naama Volloch on 11/02/2023.
+//  Created by Tomer Volloch on 11/02/2023.
 //
 
 import UIKit

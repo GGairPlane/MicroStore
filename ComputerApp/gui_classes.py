@@ -167,26 +167,3 @@ class Shared_File_But(File_But):
         win.blit(text, (self.rect.x + 3, self.rect.y + 3))
         
     
-    
-class Shared_Dir_But(Dir_But):
-    def __init__(self, dname, perm, uuid, path, id, x, y):
-        super().__init__(dname, path, id, x, y)
-        self.perm = perm
-        self.uuid = uuid
-        
-    def draw(self, win):
-        super().draw(win)
-        
-        font = pg.font.SysFont('Brush Script MT', 20)
-        match self.perm:
-            case 1: 
-                text = font.render("viewer", 1, self.text_color)      
-            case 2:
-                text = font.render("editor", 1, self.text_color)    
-            case 3:
-                text = font.render("owner", 1, self.text_color)   
-
-        win.blit(text, self.x + 3, self.y + 3)
-
-
-        

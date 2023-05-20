@@ -11,15 +11,15 @@ class User:
         os.mkdir(path)
         self.path = path
         self.curr_dir = path
-        self.copied = None, 0 # (path, 0 = copy / 1 = move)
+        #self.copied = None, 0 # (path, 0 = copy / 1 = move)
         self.connected = False
         
 
-class File:
-    def __init__(self, owner, path, perm):
-        self.owner = path
-        self.path = owner
-        self.perm = perm
+# class File:
+#     def __init__(self, owner, path, perm):
+#         self.owner = path
+#         self.path = owner
+#         self.perm = perm
         
     
         
